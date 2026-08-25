@@ -26,6 +26,14 @@ def validate_api_config(config: dict) -> None:
 
     api_config = config["api"]
 
+    if (
+        "base_url" not in api_config
+        or not isinstance(api_config["base_url"],str)
+        or  not api_config["base_url"].strip()
+    ):
+        raise ValueError("base_url config issue")
+
+
 
     if (
         "timeout" not in api_config

@@ -1,0 +1,8 @@
+api:
+  base_url: "https://api.fda.gov/device/event.json"
+  timeout: 30
+  max_attempts: 5
+  max_retry_delay: 30
+
+paths:
+  raw_data: "data/raw"
