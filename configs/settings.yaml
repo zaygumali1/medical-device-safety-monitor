@@ -3,6 +3,19 @@ api:
   timeout: 30
   max_attempts: 5
   max_retry_delay: 30
+  limit : 5
 
 paths:
   raw_data: "data/raw"
+
+product_codes:
+  - ESD
+  - OSM
+  - QUG
+  - QUF
+  - PLK
+  - QDD
+  - QUH
+  - SCR
+  - LRB
+  - LDG
