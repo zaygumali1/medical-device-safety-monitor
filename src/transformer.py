@@ -2,61 +2,24 @@ from pathlib import Path
 import pandas as pd
 import json
 from src.logger import get_logger
+from src.config import load_yaml_config
 
 logger=get_logger(__name__)
 
 
-EVENT_COLUMNS = [
-    "report_number",
-    "event_type",
-    "event_location",
-    "date_of_event",
-    "date_received",
-    "date_report",
-    "report_source_code",
-    "adverse_event_flag",
-    "health_professional",
-    "number_devices_in_event",
-    "number_patients_in_event",
-    "manufacturer_name"
-]
+SCHEMAS=load_yaml_config("configs/settings.yaml").get("schemas",{})
+EVENT_COLUMNS=SCHEMAS.get("events",{}).get("columns")
+DEVICE_COLUMNS=SCHEMAS.get("devices",{}).get("columns")
+PATIENT_COLUMNS=SCHEMAS.get("patients",{}).get("columns")
+MDR_TEXT_COLUMNS=SCHEMAS.get("mdr_text",{}).get("columns")
 
-DEVICE_COLUMNS =[
-"report_number",
-"device_event_key",
-"device_sequence_number",
-"brand_name",
-"generic_name",
-"manufacturer_d_name",
-"model_number",
-"catalog_number",
-"lot_number",
-"device_operator",
-"device_availability",
-"device_report_product_code",
-"device_age_text",
-"device_evaluated_by_manufacturer",
-"implant_flag",
-]
+REQUIRED_EVENT_COLUMNS=SCHEMAS.get("events",{}).get("required")
+REQUIRED_DEVICE_COLUMNS=SCHEMAS.get("devices",{}).get("required")
+REQUIRED_PATIENT_COLUMNS=SCHEMAS.get("patients",{}).get("required")
+REQUIRED_MDR_TEXT_COLUMNS=SCHEMAS.get("mdr_text",{}).get("required")
 
-PATIENT_COLUMNS = [
-    "report_number",
-    "patient_sequence_number",
-    "date_received",
-    "patient_age",
-    "patient_sex",
-    "patient_weight",
-    "patient_ethnicity",
-    "patient_race",
-]
 
-MDR_TEXT_COLUMNS = [
-    "report_number",
-    "mdr_text_key",
-    "text_type_code",
-    "patient_sequence_number",
-    "text",
-]
+
 
 
 def load_raw_response(filepath: Path) -> dict:
@@ -85,6 +48,7 @@ def transform_devices(raw_response: list[dict]) -> pd.DataFrame:
     device_normalized_df=pd.json_normalize(records,record_path="device",meta=["report_number"])
     if device_normalized_df.empty:
         return pd.DataFrame(columns=DEVICE_COLUMNS)
+    validate_schema(device_normalized_df,REQUIRED_DEVICE_COLUMNS)
     return device_normalized_df.reindex(columns=DEVICE_COLUMNS)
 
 
@@ -93,6 +57,7 @@ def transform_patients(raw_response:list[dict]) -> pd.DataFrame:
     patient_normalized_df=pd.json_normalize(records,record_path="patient",meta=["report_number"])
     if patient_normalized_df.empty:
         return pd.DataFrame(columns=PATIENT_COLUMNS)
+    validate_schema(patient_normalized_df,REQUIRED_PATIENT_COLUMNS)
     return patient_normalized_df.reindex(columns=PATIENT_COLUMNS)
 
 
@@ -101,7 +66,19 @@ def transform_mdr_text(raw_response:list[dict]) -> pd.DataFrame:
     mdr_normalized_df=pd.json_normalize(records,record_path="mdr_text",meta=["report_number"])
     if mdr_normalized_df.empty:
         return pd.DataFrame(columns=MDR_TEXT_COLUMNS)
+    validate_schema(mdr_normalized_df,REQUIRED_MDR_TEXT_COLUMNS)
     return mdr_normalized_df.reindex(columns=MDR_TEXT_COLUMNS)
+
+
+
+
+def validate_schema(df : pd.DataFrame, expected_columns : list[str]):
+    actual_cols=set(df.columns)
+    expected_cols=set(expected_columns)
+    if (expected_cols-actual_cols):
+        raise ValueError(f"schema validation error, missing columns {expected_cols-actual_cols}")
+
+
 
 
 def validate_required_fields(df: pd.DataFrame,required_columns: list[str]) -> pd.DataFrame:
@@ -109,7 +86,7 @@ def validate_required_fields(df: pd.DataFrame,required_columns: list[str]) -> pd
     for index,row in df.iterrows():
         missing_cols=[]
         for col in required_columns:
-            if pd.isna(row[col]):
+            if pd.isna(row[col])  or (isinstance(row[col],str) and row[col].strip()==""):
                 missing_cols.append(col)
 
         if missing_cols:
