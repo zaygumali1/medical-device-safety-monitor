@@ -7,7 +7,8 @@ api:
 
 paths:
   raw_data: "data/raw"
-  proceesed: "data/proceesed"
+  processed: "data/processed"
+  quarantine: "data/quarantine"
 
 product_codes:
   - ESD
@@ -89,6 +90,7 @@ schemas:
       - mdr_text_key
       - text_type_code
       - patient_sequence_number
+      - text
 
     required:
       - report_number 

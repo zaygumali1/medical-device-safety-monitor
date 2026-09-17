@@ -6,3 +6,10 @@ __pycache__/
 logs/
 data/
 logs/
+.env
+
+api_test.py
+jsonwork.py
+pandas_learn.py
+test.py
+tests/
