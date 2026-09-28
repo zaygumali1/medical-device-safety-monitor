@@ -5,19 +5,19 @@ from sqlalchemy import inspect
 
 
 logger = get_logger(__name__)
-def load_dataframe(df, table_name, engine):
+def load_dataframe(df, table_name, connection):
     row_count = len(df)
     if df.empty:
         logger.info(f"No rows to load into stg.{table_name}")
         return row_count
 
     try:
-        inspector=inspect(engine)
+        inspector=inspect(connection)
         if not inspector.has_table(table_name, schema="stg"):
             raise ValueError(f"Target table stg.{table_name} does not exist")
         df.to_sql(
             name=table_name,
-            con=engine,
+            con=connection,
             schema='stg',
             if_exists='append',
             index=False

@@ -4,6 +4,7 @@ from src.transformer import transform,validate_required_fields
 from src.writer import save_response
 import uuid
 from datetime import datetime
+from src.loader import load_dataframe
 current_day=datetime.now().strftime('%Y-%m-%d')
 
 
@@ -14,7 +15,8 @@ def process_entity(
         processed_directory: Path,
         nested_field:str,
         entity_name :str,
-        run_id : uuid
+        run_id : uuid,
+        connection
         ) -> pd.DataFrame:
     columns = entity_schema['columns']
     required = entity_schema['required']
@@ -22,10 +24,13 @@ def process_entity(
     
     df=transform(raw_response=valid_results,nested_field=nested_field,expected_columns=columns,required_cols=required)
     valid_df,invalid_df=validate_required_fields(df,required)
+    valid_df["ingestion_id"] = str(run_id)
+    valid_df["source_system"] = "openFDA"
     if not invalid_df.empty:
         save_response(response=invalid_df,output_dir=quarantine_directory / entity_name / current_day ,file_prefix=f'fda_{entity_name}_')
     valid_df['ingestion_id']=str(run_id)
     file_path=save_response(response=valid_df,output_dir=processed_directory /entity_name /current_day ,file_prefix=f'fda_{entity_name}_')
+    load_dataframe(connection=connection,df=valid_df,table_name=entity_name)
     return valid_df
 
 
